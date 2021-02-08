@@ -7,7 +7,7 @@ def get_grades(ra, senha):
     Função que realiza login no AVA e busca os cursos do aluno
     :param ra: Registro Academico para login
     :param senha: Senha para login
-    :return: Nomes dos Cursos, Links Específicos, Sessão, Cookies
+    :return: Dict (Nome do Aluno, Nomes dos Cursos, Links Específicos), Sessão, Cookies
     """
     session = requests.Session()
 
@@ -22,6 +22,11 @@ def get_grades(ra, senha):
     # Requisição POST para realizar login no AVA, passando os dados de login
     payload = {"username": ra, "password": senha, "logintoken": token}
     req = session.post(login_url, data=payload, headers=headers, verify=False)
+
+    aluno = BeautifulSoup(req.content, "html.parser").find("span", {"class": "usertext mr-1"})
+    if aluno is None:
+        return None
+    aluno = aluno.get_text()
 
     # Requisição para obter lista de cursos e os links para analisar notas
     req = session.get("https://ava.betim.ifmg.edu.br/moodle/grade/report/overview/index.php?id=318",
@@ -40,24 +45,23 @@ def get_grades(ra, senha):
     nomes = [c.contents for c in cursos if c is not None]
     links = [c["href"] for c in cursos if c is not None]
 
-    return nomes, links, session, req.cookies.get_dict()
+    return dict(aluno=aluno, cursos=nomes, links=links), session, req.cookies.get_dict()
 
 
-def get_specific_grades(nomes, links, session, cookies):
+def get_specific_grades(data, session, cookies):
     """
     Função que obtém as notas dos cursos no AVA
-    :param nomes: Nomes dos cursos
-    :param links: Links específicos para consulta das notas
+    :param data: Dicionário contendo aluno, nomes dos cursos e links específicos
     :param session: Sessão para realizar requisições
     :param cookies: Cookies usados no login inicial
-    :return: Dicionário com chave nome do curso e valor tupla (atividade, nota)
+    :return: Dicionário com aluno e cursos dict {chave nome e valor (atividade, nota)}
     """
-    grades = dict()
+    grades = dict(aluno=data['aluno'], cursos={})
 
-    for i in range(len(nomes)):
-        curso = nomes[i][0]
-        grades[curso] = []
-        link = links[i]
+    for i in range(len(data['cursos'])):
+        curso = data['cursos'][i][0]
+        grades['cursos'][curso] = []
+        link = data['links'][i]
 
         # Requisição para o link específico do curso
         req = session.get(link, cookies=cookies, verify=False)
@@ -77,6 +81,6 @@ def get_specific_grades(nomes, links, session, cookies):
             nota = tds[j].get_text()
             if not atividade or not nota:
                 continue
-            grades[curso].append((atividade, nota))
+            grades['cursos'][curso].append((atividade, nota))
 
     return grades
