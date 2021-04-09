@@ -1,5 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
 def get_grades(ra, senha):
@@ -60,7 +63,6 @@ def get_specific_grades(data, session, cookies):
 
     for i in range(len(data['cursos'])):
         curso = data['cursos'][i][0]
-        grades['cursos'][curso] = []
         link = data['links'][i]
 
         # Requisição para o link específico do curso
@@ -71,16 +73,20 @@ def get_specific_grades(data, session, cookies):
         tabela = soup.find("table", {"class": "boxaligncenter generaltable user-grade"})
         body = tabela.find("tbody")
 
-        # Selecionar elementos de nome da atividade e valor obtido
-        ths = body.select('th')
-        tds = body.select('td')
+        # Extrair atividades
+        atividades = []
+        for atividade in body.find_all('th'):
+            atv = atividade.find('a')
+            if atv is not None:
+                atividades.append(atv.get_text())
 
-        # Extrair as informações em texto e colocar no dicionário de notas
-        for j in range(len(ths)):
-            atividade = ths[j].findChild().get_text()
-            nota = tds[j].get_text()
-            if not atividade or not nota:
-                continue
-            grades['cursos'][curso].append((atividade, nota))
+        # Extrair notas
+        notas = []
+        for nota in body.find_all('td', class_='column-grade'):
+            notas.append(nota.get_text())
+
+        # Associar atividades e notas e colocar no dicionario
+        grades['cursos'][curso] = list(zip(atividades, notas))
 
     return grades
+

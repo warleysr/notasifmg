@@ -33,7 +33,7 @@ def login_window():
     Sg.theme("Reddit")
     font_str = "Helvitica 15 bold"
     layout = [
-        [Sg.Image(resource_path("ifmglogo.png"))],
+        [Sg.Image(resource_path(".img\\ifmglogo.png"))],
         [Sg.Text("RA:", font=font_str, text_color="green")],
         [Sg.Input(key="-RA-", font=font_str, size=(25, 1), default_text=user if user else "")],
         [Sg.Text("Senha:", font=font_str, text_color="green")],
@@ -52,6 +52,10 @@ def grades_window(grades_dict):
     i = 1
     for curso in grades_dict['cursos']:
         notas = grades_dict['cursos'][curso]
+
+        if len(notas) == 0:
+            notas.append(('', ''))
+
         tab_lay = [[Sg.Text(curso, font="Helvitica 16 bold", text_color="#5534eb")],
                    [Sg.Table(values=notas,
                              headings=["Atividade", "Nota"],
@@ -109,7 +113,6 @@ while True:
             lw.un_hide()
         else:
             grades = ava.get_specific_grades(*login)
-            print(grades)
             gw = grades_window(grades)
             while True:
                 evt, val = gw.read()
