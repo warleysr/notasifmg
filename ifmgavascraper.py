@@ -59,7 +59,7 @@ def get_grades(ra, senha):
     nomes = [
         c.text for c in cursos if c is not None and re.match(current_semester, c.text)
     ]
-    links = [c["href"] for c in cursos if c.text in nomes]
+    links = [c["href"] for c in cursos if c is not None and c.text in nomes]
 
     return dict(aluno=aluno, cursos=nomes, links=links), session, req.cookies.get_dict()
 
